@@ -94,7 +94,7 @@ def extract_info(url):
         status_code = c.getinfo(pycurl.HTTP_CODE)
         c.close()
         add_logzio_att_and_send({'url': url,
-                                 'status_code': status_code,
+                                 'status_code': str(status_code),
                                  'dns_time': dns_time,
                                  'connect_time': conn_time,
                                  'start_transfer_time': starttransfer_time,
