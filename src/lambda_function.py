@@ -153,13 +153,10 @@ def send_to_logzio(log):
         c.close()
 
 
-def lambda_handler():
+def lambda_handler(event, context):
     validate()
     get_tags()
     links = get_links_from_url()
     logger.info(f'Found {len(links)} links')
     with ThreadPoolExecutor(max_workers=len(links)) as executor:
         executor.map(extract_info, links)
-
-
-lambda_handler()
