@@ -1,3 +1,5 @@
 awslambdaric
 beautifulsoup4
 pycurl
+jmespath
+aws-lambda-powertools

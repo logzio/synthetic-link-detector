@@ -1,8 +1,8 @@
 import json
-import logging
 import os
 import re
 import pycurl
+from aws_lambda_powertools import Logger
 from io import BytesIO, StringIO
 from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor
@@ -11,18 +11,18 @@ ENV_URL = 'URL'
 ENV_LOGZIO_TOKEN = 'LOGZIO_LOG_SHIPPING_TOKEN'
 ENV_LISTENER = 'LOGZIO_LISTENER'
 ENV_TYPE = 'LOGZIO_TYPE'
-ENV_TAGS = 'LOGZIO_TAGS'
+ENV_FIELDS = 'LOGZIO_FIELDS'
 DEFAULT_TYPE = 'synthetic-links-detector'
 DEFAULT_LISTENER = 'https://listener.logz.io:8071'
 URL = os.getenv(ENV_URL, '')
 TOKEN = os.getenv(ENV_LOGZIO_TOKEN, '')
 TYPE = os.getenv(ENV_TYPE, DEFAULT_TYPE)
 LISTENER = os.getenv(ENV_LISTENER, DEFAULT_LISTENER)
-TAGS = {}
+CUSTOM_FIELDS = {}
 
 # set logger
-logger = logging.getLogger()
-logging.basicConfig(level=logging.INFO, format='%(asctime)s- %(levelname)s - %(message)s')
+logger = Logger()
+
 
 # Validate required parameters
 def validate():
@@ -31,15 +31,17 @@ def validate():
     if TOKEN == '':
         raise ValueError('Missing Logz.io shipping token. Exiting.')
 
+
 # Get tags from user, if applicable
 def get_tags():
-    global TAGS
-    tags_str = os.getenv(ENV_TAGS, '')
+    global CUSTOM_FIELDS
+    tags_str = os.getenv(ENV_FIELDS, '')
     if tags_str != '':
         tags_pairs = tags_str.split(',')
         for pair in tags_pairs:
             key_val = pair.split('=')
-            TAGS[key_val[0]] = key_val[1]
+            CUSTOM_FIELDS[key_val[0]] = key_val[1]
+
 
 # Scrape url for links
 def get_links_from_url():
@@ -112,8 +114,8 @@ def extract_info(url):
 # Add logzio parameters to the log
 def add_logzio_att_and_send(log):
     log['type'] = TYPE
-    if len(TAGS) > 0:
-        log.update(TAGS)
+    if len(CUSTOM_FIELDS) > 0:
+        log.update(CUSTOM_FIELDS)
     send_to_logzio(log)
 
 
