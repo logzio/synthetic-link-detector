@@ -16,7 +16,7 @@ DEFAULT_TYPE = 'synthetic-links-detector'
 DEFAULT_LISTENER = 'https://listener.logz.io:8071'
 URL = os.getenv(ENV_URL, '')
 TOKEN = os.getenv(ENV_LOGZIO_TOKEN, '')
-TYPE = os.getenv(ENV_TAGS, DEFAULT_TYPE)
+TYPE = os.getenv(ENV_TYPE, DEFAULT_TYPE)
 LISTENER = os.getenv(ENV_LISTENER, DEFAULT_LISTENER)
 TAGS = {}
 
