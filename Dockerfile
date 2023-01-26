@@ -1,38 +1,3 @@
-# FROM public.ecr.aws/lambda/python:3.9-x86_64 as lambda-dep
-#
-# FROM python:3.9-slim-bullseye
-#
-# RUN apt update \
-# && apt upgrade \
-# && apt install curl -y \
-# && apt install libcurl4-openssl-dev libssl-dev gcc -y
-#
-# COPY --from=lambda-dep /lambda-entrypoint.sh /
-# COPY --from=lambda-dep /usr/local/bin/aws-lambda-rie /usr/local/bin/aws-lambda-rie
-# COPY --from=lambda-dep /opt /opt
-# COPY --from=lambda-dep /var/runtime/bootstrap var/runtime/bootstrap
-#
-# ENV LANG=en_US.UTF-8
-# ENV TZ=:/etc/localtime
-# ENV PATH=${PATH}/var/lang/bin:/usr/local/bin:/usr/bin/:/bin:/opt/bin
-# ENV LD_LIBRARY_PATH=/var/lang/lib:/lib64:/usr/lib64:/var/runtime:/var/runtime/lib:/var/task:/var/task/lib:/opt/lib
-# ENV LAMBDA_TASK_ROOT=/var/task
-# ENV LAMBDA_RUNTIME_DIR=/var/runtime
-#
-# WORKDIR /var/task
-#
-# COPY src/ ${LAMBDA_TASK_ROOT}
-# RUN pip install -r ./requirements.txt -t ${LAMBDA_TASK_ROOT}
-#
-# # CMD ["python", "./lambda_function.py"]
-#
-# # ENTRYPOINT [ "/usr/local/bin/python", "lambda_function.py" ]
-# # CMD [ "app.handler" ]
-#
-# ENTRYPOINT ["/lambda-entrypoint.sh"]
-# CMD ["lambda_function.lambda_handler"]
-
-
 # Define custom function directory
 ARG FUNCTION_DIR="/function"
 
@@ -72,5 +37,5 @@ WORKDIR ${FUNCTION_DIR}
 # Copy in the built dependencies
 COPY --from=build-image ${FUNCTION_DIR} ${FUNCTION_DIR}
 
-ENTRYPOINT [ "/usr/local/bin/python", "-m", "awslambdaric" ]
+ENTRYPOINT [ "/usr/local/bin/python", "-m", "awslambdaric"]
 CMD [ "lambda_function.lambda_handler" ]
