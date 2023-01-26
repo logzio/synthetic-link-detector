@@ -6,6 +6,7 @@ from aws_lambda_powertools import Logger
 from io import BytesIO, StringIO
 from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor
+from crhelper import CfnResource
 
 ENV_URL = 'URL'
 ENV_LOGZIO_TOKEN = 'LOGZIO_LOG_SHIPPING_TOKEN'
@@ -22,6 +23,9 @@ CUSTOM_FIELDS = {}
 
 # set logger
 logger = Logger()
+
+# for first invocation
+helper = CfnResource()
 
 
 # Validate required parameters
@@ -98,7 +102,8 @@ def extract_info(url):
         port = c.getinfo(pycurl.PRIMARY_PORT)  # port
         status_code = c.getinfo(pycurl.HTTP_CODE)
         c.close()
-        add_logzio_att_and_send({'url': url,
+        add_logzio_att_and_send({'link': url,
+                                 'main_url': URL,
                                  'status_code': str(status_code),
                                  'dns_time': dns_time,
                                  'connect_time': conn_time,
@@ -160,10 +165,30 @@ def send_to_logzio(log):
         c.close()
 
 
-def lambda_handler(event, context):
+@helper.create
+@helper.update
+def detect(event, context):
     validate()
     get_tags()
     links = get_links_from_url()
     logger.info(f'Found {len(links)} links')
     with ThreadPoolExecutor(max_workers=len(links)) as executor:
         executor.map(extract_info, links)
+    helper.Data['Message'] = 'Finished custom resource run'
+
+
+@helper.delete
+def no_op(_, __):
+    pass
+
+
+def lambda_handler(event, context):
+    if 'RequestId' in event and event['RequestId'] != '':
+        helper(event, context)
+    else:
+        validate()
+        get_tags()
+        links = get_links_from_url()
+        logger.info(f'Found {len(links)} links')
+        with ThreadPoolExecutor(max_workers=len(links)) as executor:
+            executor.map(extract_info, links)

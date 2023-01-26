@@ -48,7 +48,7 @@ Resources:
     Type: 'AWS::Lambda::Function'
     Properties:
       Code:
-        ImageUri: # TODO
+        ImageUri:  # TODO
       FunctionName: !Join [ '-', [ !Ref AWS::StackName, 'lambda-function' ] ]
       Role: !GetAtt logzioSyntheticLinkDetectoRole.Arn
       Timeout: !Ref functionTimeout
@@ -88,6 +88,7 @@ Resources:
                 Resource: '*'
   logzioSyntheticLinkDetectorEventRule:
     Type: 'AWS::Events::Rule'
+    DependsOn: logzioSyntheticLinkDetectorPrimerInvoke
     Properties:
       Name: !Join [ '-', [ !Ref AWS::StackName, 'event-rule' ] ]
       ScheduleExpression: !Ref functionInvocationInterval
@@ -95,10 +96,16 @@ Resources:
       Targets:
         - Arn: !GetAtt logzioSyntheticLinkDetectorLambda.Arn
           Id: !Join [ '-', [ 'LogzioSyntheticLinkDetector', !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref AWS::StackId ] ] ] ] ] ]
-  LambdaPermission:
+  logzioSyntheticLinkDetectorLambdaPermission:
     Type: 'AWS::Lambda::Permission'
     Properties:
       FunctionName: !Ref logzioSyntheticLinkDetectorLambda
       Action: 'lambda:InvokeFunction'
       Principal: events.amazonaws.com
       SourceArn: !GetAtt logzioSyntheticLinkDetectorEventRule.Arn
+  logzioSyntheticLinkDetectorPrimerInvoke:
+    Type: AWS::CloudFormation::CustomResource
+    DependsOn: logzioSyntheticLinkDetectorLambda
+    Version: '1.0'
+    Properties:
+      ServiceToken: !GetAtt logzioSyntheticLinkDetectorLambda.Arn

@@ -3,3 +3,5 @@ beautifulsoup4
 pycurl
 jmespath
 aws-lambda-powertools
+boto3
+crhelper
