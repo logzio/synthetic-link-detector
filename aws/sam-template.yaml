@@ -1,0 +1,104 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: 'Monitor broken links in pages'
+Parameters:
+  logzioToken:
+    Type: String
+    Description: 'Your Logz.io log shipping token'
+    MinLength: 1
+  logzioListener:
+    Type: String
+    Description: 'Your Logz.io listener'
+    Default: 'https://listener.logz.io:8071'
+    AllowedValues:
+      - 'https://listener.logz.io:8071'
+      - 'https://listener-au.logz.io:8071'
+      - 'https://listener-ca.logz.io:8071'
+      - 'https://listener-eu.logz.io:8071'
+      - 'https://listener-uk.logz.io:8071'
+  url:
+    Type: String
+    Description: 'The URL you wish to monitor, for example: https://logz.io'
+  logzioType:
+    Type: String
+    Description: 'Set type for the data that will arrive to Logz.io'
+    Default: 'synthetic-links-detector'
+  logzioCustomFields:
+    Type: String
+    Description: 'Add additional fields to the data, to be presented in Logz.io. Comma separated list of key-value pairs. Formatted as key1=value1,key2=value2'
+  functionTimeout:
+    Type: Number
+    Default: 60
+    MinValue: 5
+    Description: 'Timeout for your Lambda function'
+  functionMemorySize:
+    Type: Number
+    Default: 512
+    MinValue: 512
+    Description: 'Memory size (in MB) for your Lambda function'
+  functionInvocationInterval: # TODO - allowed values
+    Type: String
+    Description: 'The scheduling expression that determines how often the Lambda function runs.'
+    Default: rate(10 hours)
+    MinLength: 1
+    MaxLength: 256
+
+Resources:
+  logzioSyntheticLinkDetectorLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Code:
+        ImageUri: # TODO
+      FunctionName: !Join [ '-', [ !Ref AWS::StackName, 'lambda-function' ] ]
+      Role: !GetAtt logzioSyntheticLinkDetectoRole.Arn
+      Timeout: !Ref functionTimeout
+      MemorySize: !Ref functionMemorySize
+      PackageType: Image
+      Environment:
+        Variables:
+          LOGZIO_LOG_SHIPPING_TOKEN: !Ref logzioToken
+          LOGZIO_LISTENER: !Ref logzioListener
+          URL: !Ref url
+          LOGZIO_TYPE: !Ref logzioType
+          LOGZIO_FIELDS: !Ref logzioCustomFields
+  logzioSyntheticLinkDetectoRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Join [ '-', [ 'LogzioSyntheticLinkDetectorLambdaRole', !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref AWS::StackId ] ] ] ] ] ]
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: !Join [ '-', [ 'LogzioSyntheticLinkDetectorLambdaPolicy', !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref AWS::StackId ] ] ] ] ] ]
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: '*'
+  logzioSyntheticLinkDetectorEventRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Name: !Join [ '-', [ !Ref AWS::StackName, 'event-rule' ] ]
+      ScheduleExpression: !Ref functionInvocationInterval
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt logzioSyntheticLinkDetectorLambda.Arn
+          Id: !Join [ '-', [ 'LogzioSyntheticLinkDetector', !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref AWS::StackId ] ] ] ] ] ]
+  LambdaPermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !Ref logzioSyntheticLinkDetectorLambda
+      Action: 'lambda:InvokeFunction'
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt logzioSyntheticLinkDetectorEventRule.Arn
