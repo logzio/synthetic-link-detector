@@ -24,14 +24,14 @@ TAGS = {}
 logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s- %(levelname)s - %(message)s')
 
-
+# Validate required parameters
 def validate():
     if URL == '':
         raise ValueError('Missing URL. Exiting.')
     if TOKEN == '':
         raise ValueError('Missing Logz.io shipping token. Exiting.')
 
-
+# Get tags from user, if applicable
 def get_tags():
     global TAGS
     tags_str = os.getenv(ENV_TAGS, '')
@@ -41,7 +41,7 @@ def get_tags():
             key_val = pair.split('=')
             TAGS[key_val[0]] = key_val[1]
 
-
+# Scrape url for links
 def get_links_from_url():
     try:
         links = []
@@ -61,6 +61,8 @@ def get_links_from_url():
             try:
                 href = link.get('href')
                 if href is not None:
+                    # Some links are relative. If so - we build the link by concatenating the relative path to the
+                    # giver url
                     if not re.search(r'^http(s?):\/\/', href):
                         href = f'{URL}{href}'
                     if href not in links:
@@ -73,6 +75,7 @@ def get_links_from_url():
         return link
 
 
+# Getting network data from url
 def extract_info(url):
     try:
         c = pycurl.Curl()
@@ -106,6 +109,7 @@ def extract_info(url):
         logger.error(f'Error while extracting info from link {e}')
 
 
+# Add logzio parameters to the log
 def add_logzio_att_and_send(log):
     log['type'] = TYPE
     if len(TAGS) > 0:
@@ -113,6 +117,7 @@ def add_logzio_att_and_send(log):
     send_to_logzio(log)
 
 
+# Send log to logzio
 def send_to_logzio(log):
     max_retry = 4
     retry = 1
