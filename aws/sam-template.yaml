@@ -19,6 +19,18 @@ Parameters:
   url:
     Type: String
     Description: 'The URL you wish to monitor, for example: https://logz.io'
+  functionInvocationInterval:
+    Type: String
+    Description: 'The scheduling expression that determines how often the Lambda function runs.'
+    Default: 'rate(1 days)'
+    AllowedValues:
+      - 'rate(10 minutes)'
+      - 'rate(15 minutes)'
+      - 'rate(30 minutes)'
+      - 'rate(1 hour)'
+      - 'rate(6 hours)'
+      - 'rate(12 hours)'
+      - 'rate(1 days)'
   logzioType:
     Type: String
     Description: 'Set type for the data that will arrive to Logz.io'
@@ -29,19 +41,14 @@ Parameters:
   functionTimeout:
     Type: Number
     Default: 60
-    MinValue: 5
-    Description: 'Timeout for your Lambda function'
+    MinValue: 60
+    Description: 'Timeout for your Lambda function, in seconds'
   functionMemorySize:
     Type: Number
     Default: 512
     MinValue: 512
     Description: 'Memory size (in MB) for your Lambda function'
-  functionInvocationInterval: # TODO - allowed values
-    Type: String
-    Description: 'The scheduling expression that determines how often the Lambda function runs.'
-    Default: rate(10 hours)
-    MinLength: 1
-    MaxLength: 256
+
 
 Resources:
   logzioSyntheticLinkDetectorLambda:
