@@ -1,6 +1,8 @@
 import json
 import os
+import random
 import re
+import string
 import pycurl
 from aws_lambda_powertools import Logger
 from io import BytesIO, StringIO
@@ -26,6 +28,9 @@ logger = Logger()
 
 # for first invocation
 helper = CfnResource()
+
+letters = string.ascii_letters
+RUN_ID = ''.join(random.choice(letters) for i in range(32))
 
 
 # Validate required parameters
@@ -68,7 +73,7 @@ def get_links_from_url():
                 href = link.get('href')
                 if href is not None:
                     # Some links are relative. If so - we build the link by concatenating the relative path to the
-                    # giver url
+                    # given url
                     if not re.search(r'^http(s?):\/\/', href):
                         href = f'{URL}{href}'
                     if href not in links:
@@ -78,7 +83,7 @@ def get_links_from_url():
         return links
     except Exception as e:
         logger.error(f'Encountered error while collecting page\'s links: {e}')
-        return link
+        return links
 
 
 # Getting network data from url
@@ -119,6 +124,7 @@ def extract_info(url):
 # Add logzio parameters to the log
 def add_logzio_att_and_send(log):
     log['type'] = TYPE
+    log['run_id'] = RUN_ID
     if len(CUSTOM_FIELDS) > 0:
         log.update(CUSTOM_FIELDS)
     send_to_logzio(log)
