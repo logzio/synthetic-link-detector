@@ -34,15 +34,15 @@ const (
 )
 
 var (
-	logger       *log.Logger
-	token        string
-	listener     string
-	fullListener string
-	urlToInspect string
-	logType      string
-	httpClient   *http.Client
-	wg           sync.WaitGroup
-	uuid         string
+	logger                 *log.Logger
+	token                  string
+	listener               string
+	fullListener           string
+	urlToInspect           string
+	logType                string
+	httpClientLogzioSender *http.Client
+	wg                     sync.WaitGroup
+	uuid                   string
 )
 
 func main() {
@@ -59,7 +59,7 @@ func main() {
 	linksInPage := getLinksInPage(urlToInspect)
 	logger.Printf("detected %d links in %s\n", len(linksInPage), urlToInspect)
 	wg.Add(len(linksInPage))
-	setupHttpClient()
+	setupHttpClientLogzioSender()
 	for _, link := range linksInPage {
 		go detectAndSend(link, urlToInspect)
 	}
@@ -95,7 +95,7 @@ func generateUuid() {
 	uuid = string(uuidBytes)
 }
 
-func setupHttpClient() {
+func setupHttpClientLogzioSender() {
 	tlsConfig := &tls.Config{}
 	transport := &http.Transport{
 		Proxy:           http.ProxyFromEnvironment,
@@ -103,7 +103,7 @@ func setupHttpClient() {
 	}
 
 	// in case server side is sleeping - wait 10s instead of waiting for him to wake up
-	httpClient = &http.Client{
+	httpClientLogzioSender = &http.Client{
 		Transport: transport,
 		Timeout:   time.Second * 10,
 	}
@@ -246,7 +246,7 @@ func sendToLogzio(log []byte) {
 	req.Header.Add("Content-Type", "application/json")
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
-		resp, err := httpClient.Do(req)
+		resp, err := httpClientLogzioSender.Do(req)
 		if err != nil {
 			logger.Printf("error sending logs to logzio %s\n", err)
 			return
