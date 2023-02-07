@@ -55,7 +55,7 @@ Resources:
     Type: 'AWS::Lambda::Function'
     Properties:
       Code:
-        ImageUri:  # TODO
+        ImageUri: 'public.ecr.aws/c3d4d8b6/synthetic-link-detector:<<VERSION>>'
       FunctionName: !Join [ '-', [ !Ref AWS::StackName, 'lambda-function' ] ]
       Role: !GetAtt logzioSyntheticLinkDetectoRole.Arn
       Timeout: !Ref functionTimeout
