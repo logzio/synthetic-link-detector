@@ -171,11 +171,6 @@ func detectAndSend(link, mainUrl string) {
 
 	client := &http.Client{
 		Transport: tr,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			// always refuse to follow redirects, visit does that
-			// manually if required.
-			return http.ErrUseLastResponse
-		},
 	}
 
 	resp, err := client.Do(req)
