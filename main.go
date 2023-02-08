@@ -211,37 +211,37 @@ func detectAndSend(link, mainUrl string) {
 		t0 = t1
 	}
 
-	data := make(map[string]string, 0)
+	data := make(map[string]interface{}, 0)
 	data["link"] = link
 	data["main_url"] = mainUrl
 	data["status_code"] = strconv.Itoa(resp.StatusCode)
 	switch l.Scheme {
 	case "https":
-		data["dns_lookup"] = strconv.FormatInt(t1.Sub(t0).Milliseconds(), 10)
-		data["tcp_connection"] = strconv.FormatInt(t2.Sub(t1).Milliseconds(), 10)
-		data["tls_handshake"] = strconv.FormatInt(t6.Sub(t5).Milliseconds(), 10)
-		data["server_processing"] = strconv.FormatInt(t4.Sub(t3).Milliseconds(), 10)
-		data["content_transfer"] = strconv.FormatInt(t7.Sub(t4).Milliseconds(), 10)
-		data["name_lookup"] = strconv.FormatInt(t1.Sub(t0).Milliseconds(), 10)
-		data["connect"] = strconv.FormatInt(t2.Sub(t0).Milliseconds(), 10)
-		data["pre_transfer"] = strconv.FormatInt(t3.Sub(t0).Milliseconds(), 10)
-		data["start_transfer"] = strconv.FormatInt(t4.Sub(t0).Milliseconds(), 10)
-		data["total"] = strconv.FormatInt(t7.Sub(t0).Milliseconds(), 10)
+		data["dns_lookup"] = t1.Sub(t0).Milliseconds()
+		data["tcp_connection"] = t2.Sub(t1).Milliseconds()
+		data["tls_handshake"] = t6.Sub(t5).Milliseconds()
+		data["server_processing"] = t4.Sub(t3).Milliseconds()
+		data["content_transfer"] = t7.Sub(t4).Milliseconds()
+		data["name_lookup"] = t1.Sub(t0).Milliseconds()
+		data["connect"] = t2.Sub(t0).Milliseconds()
+		data["pre_transfer"] = t3.Sub(t0).Milliseconds()
+		data["start_transfer"] = t4.Sub(t0).Milliseconds()
+		data["total"] = t7.Sub(t0).Milliseconds()
 	case "http":
-		data["dns_lookup"] = strconv.FormatInt(t1.Sub(t0).Milliseconds(), 10)
-		data["tcp_connection"] = strconv.FormatInt(t3.Sub(t1).Milliseconds(), 10)
-		data["server_processing"] = strconv.FormatInt(t4.Sub(t3).Milliseconds(), 10)
-		data["content_transfer"] = strconv.FormatInt(t7.Sub(t4).Milliseconds(), 10)
-		data["name_lookup"] = strconv.FormatInt(t1.Sub(t0).Milliseconds(), 10)
-		data["connect"] = strconv.FormatInt(t3.Sub(t0).Milliseconds(), 10)
-		data["start_transfer"] = strconv.FormatInt(t4.Sub(t0).Milliseconds(), 10)
-		data["total"] = strconv.FormatInt(t7.Sub(t0).Milliseconds(), 10)
+		data["dns_lookup"] = t1.Sub(t0).Milliseconds()
+		data["tcp_connection"] = t3.Sub(t1).Milliseconds()
+		data["server_processing"] = t4.Sub(t3).Milliseconds()
+		data["content_transfer"] = t7.Sub(t4).Milliseconds()
+		data["name_lookup"] = t1.Sub(t0).Milliseconds()
+		data["connect"] = t3.Sub(t0).Milliseconds()
+		data["start_transfer"] = t4.Sub(t0).Milliseconds()
+		data["total"] = t7.Sub(t0).Milliseconds()
 	}
 
 	processAndSendLog(data)
 }
 
-func processAndSendLog(data map[string]string) {
+func processAndSendLog(data map[string]interface{}) {
 	addLogzioFields(data)
 	addCustomFields(data)
 	jsonBytes, err := json.Marshal(data)
@@ -290,12 +290,12 @@ func sendToLogzio(log []byte) {
 	}
 }
 
-func addLogzioFields(data map[string]string) {
+func addLogzioFields(data map[string]interface{}) {
 	data["type"] = logType
 	data["run_id"] = runUuid
 }
 
-func addCustomFields(data map[string]string) {
+func addCustomFields(data map[string]interface{}) {
 	input := os.Getenv(envCustomFields)
 	if input == "" {
 		return
