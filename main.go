@@ -6,6 +6,9 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-lambda-go/cfn"
+	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/google/uuid"
 	"golang.org/x/net/html"
 	"io"
 	"log"
@@ -14,7 +17,6 @@ import (
 	"net/http/httptrace"
 	"net/url"
 	"os"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -42,20 +44,52 @@ var (
 	logType                string
 	httpClientLogzioSender *http.Client
 	wg                     sync.WaitGroup
-	uuid                   string
+	runUuid                string
+	zeroDialer             net.Dialer
 )
 
 func main() {
-	//lambda.Start(HandleRequest)
-	// Scheduled invocation
-	err := getParameters()
-	if err != nil {
-		//return "lambda encountered error", err
-		return
+	lambda.Start(HandleRequest)
+}
+
+func HandleRequest(ctx context.Context, event map[string]interface{}) (string, error) {
+	if _, ok := event["RequestId"]; ok {
+		// First invocation
+		if event["RequestType"].(string) == "Create" {
+			lambda.Start(cfn.LambdaWrap(customResourceRun))
+		} else {
+			lambda.Start(cfn.LambdaWrap(customResourceRunDoNothing))
+		}
+	} else {
+		// Scheduled invocation
+		return run()
 	}
 
-	generateUuid()
-	logger = log.New(os.Stdout, uuid, log.Ldate|log.Ltime|log.Lshortfile)
+	return "lambda finished", nil
+}
+
+// Wrapper for first invocation from cloud formation custom resource
+func customResourceRun(ctx context.Context, event cfn.Event) (physicalResourceID string, data map[string]interface{}, err error) {
+	_, err = run()
+	return
+}
+
+func customResourceRunDoNothing(ctx context.Context, event cfn.Event) (physicalResourceID string, data map[string]interface{}, err error) {
+	return
+}
+
+func run() (string, error) {
+	err := getParameters()
+	if err != nil {
+		return "lambda encountered error while getting parameters", err
+	}
+
+	err = generateUuid()
+	if err != nil {
+		return "lambda encountered error while generating run_uuid", err
+	}
+
+	logger = log.New(os.Stdout, runUuid, log.Ldate|log.Ltime|log.Lshortfile)
 	linksInPage := getLinksInPage(urlToInspect)
 	logger.Printf("detected %d links in %s\n", len(linksInPage), urlToInspect)
 	wg.Add(len(linksInPage))
@@ -66,33 +100,14 @@ func main() {
 
 	wg.Wait()
 	logger.Printf("finished run\n")
+	return "finished run", nil
 }
 
-//func HandleRequest(ctx context.Context, event map[string]interface{}) (string, error) {
-//	if _, ok := event["RequestId"]; ok {
-//		// First invocation
-//	} else {
-//		// Scheduled invocation
-//		token, listener, urlToInspect, err := getParameters()
-//		if err != nil {
-//			return "lambda encountered error", err
-//		}
-//		linksInPage := getLinksInPage(urlToInspect)
-//		for _, link := range linksInPage {
-//			go detectAndSend(link)
-//		}
-//	}
-//
-//}
+func generateUuid() error {
+	id := uuid.New()
 
-func generateUuid() {
-	var err error
-	uuidBytes, err := exec.Command("uuidgen").Output()
-	if err != nil {
-		logger.Fatalf("could not generate uuid: %s\n", err)
-	}
-
-	uuid = string(uuidBytes)
+	runUuid = id.String()
+	return nil
 }
 
 func setupHttpClientLogzioSender() {
@@ -149,6 +164,9 @@ func detectAndSend(link, mainUrl string) {
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 		ForceAttemptHTTP2:     true,
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return zeroDialer.DialContext(ctx, "tcp4", addr)
+		},
 	}
 
 	l, err := url.Parse(link)
@@ -274,7 +292,7 @@ func sendToLogzio(log []byte) {
 
 func addLogzioFields(data map[string]string) {
 	data["type"] = logType
-	data["run_id"] = uuid
+	data["run_id"] = runUuid
 }
 
 func addCustomFields(data map[string]string) {
