@@ -48,9 +48,9 @@ Give the stack a few minutes to be deployed.
 
 Once the stack will be created, the function will run one time and send data, then it will run in the rate the you've defined.
 
-## Acknowledgment
+## Copyright Notice
 
-This project uses some logic from [httpstat repo](https://github.com/davecheney/httpstat).
+This project's code parially based on [httpstat repo](https://github.com/davecheney/httpstat).
 
 ### Changelog:
 
