@@ -50,7 +50,7 @@ Once the stack will be created, the function will run one time and send data, th
 
 ## Acknowledgment
 
-This project is based on [httpstat repo](https://github.com/davecheney/httpstat).
+This project uses some logic from [httpstat repo](https://github.com/davecheney/httpstat).
 
 ### Changelog:
 
