@@ -30,7 +30,6 @@ const (
 	envListener     = "LOGZIO_LISTENER"
 	envLogzioType   = "LOGZIO_TYPE"
 	envCustomFields = "LOGZIO_FIELDS"
-	envAwsRegion    = "AWS_REGION" // reserved env
 
 	defaultListener = "https://listener.logz.io:8071"
 	defaultLogType  = "synthetic-links-detector"
@@ -47,27 +46,6 @@ var (
 	wg                     sync.WaitGroup
 	runUuid                string
 	zeroDialer             net.Dialer
-	regionToGeoLocation    = map[string][]float64{
-		"us-east-1":      {-78.024902, 37.926868},  // N. Virginia
-		"us-east-2":      {-82.996216, 40.367474},  // Ohio
-		"us-west-1":      {-119.417931, 36.778259}, // N. California
-		"us-west-2":      {-120.500000, 44.000000}, // Oregon
-		"ap-south-1":     {72.877426, 19.076090},   // Mumbai
-		"ap-northeast-3": {135.484802, 34.672314},  // Osaka
-		"ap-northeast-2": {127.024612, 37.532600},  // Seoul
-		"ap-southeast-1": {103.851959, 1.290270},   // Singapore
-		"ap-southeast-2": {151.209900, -33.865143}, // Sydney
-		"ap-northeast-1": {139.839478, 35.652832},  // Tokyo
-		"ca-central-1":   {-73.561668, 45.508888},  // Canada Central
-		"eu-central-1":   {8.682127, 50.110924},    // Frankfurt
-		"eu-west-1":      {-6.266155, 53.350140},   // Ireland
-		"eu-west-2":      {-0.118092, 51.509865},   // London
-		"eu-west-3":      {2.349014, 48.864716},    // Paris
-		"eu-north-1":     {18.063240, 59.334591},   // Stockholm
-		"sa-east-1":      {-46.625290, -23.533773}, // Sao Paulo
-	}
-	location  []float64
-	awsRegion string
 )
 
 func main() {
@@ -315,10 +293,6 @@ func sendToLogzio(log []byte) {
 func addLogzioFields(data map[string]interface{}) {
 	data["type"] = logType
 	data["run_id"] = runUuid
-	data["geoip"] = map[string][]float64{
-		"location": location,
-	}
-	data["aws_region"] = awsRegion
 }
 
 func addCustomFields(data map[string]interface{}) {
@@ -393,17 +367,6 @@ func getParameters() (err error) {
 	logType = os.Getenv(envLogzioType)
 	if logType == "" {
 		logType = defaultLogType
-	}
-
-	awsRegion = os.Getenv(envAwsRegion)
-	if awsRegion == "" {
-		logger.Print("Could not get aws region. geolocation will not be added\nֿ")
-	} else {
-		if val, ok := regionToGeoLocation[awsRegion]; ok {
-			location = val
-		} else {
-			logger.Printf("region %s is not mapped. geolocation will not be added\n")
-		}
 	}
 
 	return
