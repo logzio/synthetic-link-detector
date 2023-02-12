@@ -54,4 +54,5 @@ This project's code partially based on [httpstat repo](https://github.com/davech
 
 ### Changelog:
 
+- **0.0.2**: Add geolocation data.
 - **0.0.1**: Initial release.
