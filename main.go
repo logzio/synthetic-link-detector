@@ -359,7 +359,20 @@ func getLinksInPage(url string) []string {
 					link := a.Val
 					matched, _ := regexp.MatchString("^http(s?)://", link)
 					if !matched {
-						link = url + link
+						tmpUrl := url
+						tmpLink := link
+						prefix, _ := regexp.Compile("^/+")
+						suffix, _ := regexp.Compile("/+$")
+						prefixIndex := prefix.FindStringIndex(link)
+						if len(prefixIndex) > 0 {
+							tmpLink = link[prefixIndex[1]:len(link)]
+						}
+						suffixIndex := suffix.FindStringIndex(url)
+						if len(suffixIndex) > 0 {
+							tmpUrl = url[:suffixIndex[0]]
+						}
+
+						link = fmt.Sprintf("%s/%s", tmpUrl, tmpLink)
 					}
 					if !contains(links, link) {
 						links = append(links, link)
