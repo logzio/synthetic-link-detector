@@ -34,6 +34,8 @@ const (
 
 	defaultListener = "https://listener.logz.io:8071"
 	defaultLogType  = "synthetic-links-detector"
+
+	maxRedirects = 2
 )
 
 var (
@@ -147,11 +149,34 @@ func setupHttpClientLogzioSender() {
 }
 
 func detectAndSend(link, mainUrl string) {
+	currentRedirect := 0
+	linkToInspect := link
+	for {
+		resp := createSendData(linkToInspect, mainUrl)
+		if resp != nil {
+			if resp.StatusCode > 299 && resp.StatusCode < 400 && currentRedirect < maxRedirects {
+				linkToInspectUrlObj, err := resp.Location()
+				if err != nil {
+					logger.Printf("Error on redirect: %s", err.Error())
+					break
+				}
+				linkToInspect = linkToInspectUrlObj.String()
+				currentRedirect++
+			} else {
+				break
+			}
+		} else {
+			break
+		}
+	}
+}
+
+func createSendData(link, mainUrl string) *http.Response {
 	defer wg.Done()
 	req, err := http.NewRequest(http.MethodGet, link, nil)
 	if err != nil {
 		logger.Printf("unable to create request: %v\n", err)
-		return
+		return nil
 	}
 
 	var t0, t1, t2, t3, t4, t5, t6 time.Time
@@ -194,7 +219,7 @@ func detectAndSend(link, mainUrl string) {
 	l, err := url.Parse(link)
 	if err != nil {
 		logger.Printf("could not parse link %s: %s\n", link, err.Error())
-		return
+		return nil
 	}
 
 	if l.Scheme == "https" {
@@ -216,13 +241,13 @@ func detectAndSend(link, mainUrl string) {
 	resp, err := client.Do(req)
 	if err != nil {
 		logger.Printf("failed to read response: %v\n", err)
-		return
+		return nil
 	}
 
 	w := io.Discard
 	if _, err := io.Copy(w, resp.Body); err != nil && w != io.Discard {
 		logger.Printf("failed to read response body: %v\n", err)
-		return
+		return nil
 	}
 
 	resp.Body.Close()
@@ -261,6 +286,7 @@ func detectAndSend(link, mainUrl string) {
 	}
 
 	processAndSendLog(data)
+	return resp
 }
 
 func processAndSendLog(data map[string]interface{}) {
