@@ -236,6 +236,9 @@ func createSendData(link, mainUrl string) *http.Response {
 
 	client := &http.Client{
 		Transport: tr,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
 	}
 
 	resp, err := client.Do(req)
