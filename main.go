@@ -149,12 +149,15 @@ func setupHttpClientLogzioSender() {
 }
 
 func detectAndSend(link, mainUrl string) {
+	defer wg.Done()
 	currentRedirect := 0
 	linkToInspect := link
 	for {
 		resp := createSendData(linkToInspect, mainUrl)
 		if resp != nil {
 			if resp.StatusCode > 299 && resp.StatusCode < 400 && currentRedirect < maxRedirects {
+				// TODO - delete:
+				logger.Printf("redirect %d of %d", currentRedirect, maxRedirects)
 				linkToInspectUrlObj, err := resp.Location()
 				if err != nil {
 					logger.Printf("Error on redirect: %s", err.Error())
@@ -172,7 +175,6 @@ func detectAndSend(link, mainUrl string) {
 }
 
 func createSendData(link, mainUrl string) *http.Response {
-	defer wg.Done()
 	req, err := http.NewRequest(http.MethodGet, link, nil)
 	if err != nil {
 		logger.Printf("unable to create request: %v\n", err)
