@@ -55,7 +55,7 @@ This project's code partially based on [httpstat repo](https://github.com/davech
 ### Changelog:
 - **0.0.3**:
   - Update dependencies.
-  - **Handle redirects*:
+  - **Handle redirects**:
     - Each redirect is sent as a separate log, with its data.
     - A link from a redirect will have a `redirected_from` field.
 - **0.0.2**: Add geolocation data.
