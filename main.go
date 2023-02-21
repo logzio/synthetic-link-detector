@@ -412,6 +412,8 @@ func getLinksInPage(url string) []string {
 	return links
 }
 
+// Since main url can contain a suffix of '/', and a link can be relative have a prefix of `/`, we remove possible prefixes & suffixes
+// and generate the full link ourselves
 func getCleanLink(url, link string) string {
 	tmpUrl := url
 	tmpLink := link
