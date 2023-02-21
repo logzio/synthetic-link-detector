@@ -394,20 +394,7 @@ func getLinksInPage(url string) []string {
 					link := a.Val
 					matched, _ := regexp.MatchString("^http(s?)://", link)
 					if !matched {
-						tmpUrl := url
-						tmpLink := link
-						prefix, _ := regexp.Compile("^/+")
-						suffix, _ := regexp.Compile("/+$")
-						prefixIndex := prefix.FindStringIndex(link)
-						if len(prefixIndex) > 0 {
-							tmpLink = link[prefixIndex[1]:len(link)]
-						}
-						suffixIndex := suffix.FindStringIndex(url)
-						if len(suffixIndex) > 0 {
-							tmpUrl = url[:suffixIndex[0]]
-						}
-
-						link = fmt.Sprintf("%s/%s", tmpUrl, tmpLink)
+						link = getCleanLink(url, link)
 					}
 					if !contains(links, link) {
 						links = append(links, link)
@@ -423,6 +410,23 @@ func getLinksInPage(url string) []string {
 
 	f(doc)
 	return links
+}
+
+func getCleanLink(url, link string) string {
+	tmpUrl := url
+	tmpLink := link
+	prefix, _ := regexp.Compile("^/+")
+	suffix, _ := regexp.Compile("/+$")
+	prefixIndex := prefix.FindStringIndex(link)
+	if len(prefixIndex) > 0 {
+		tmpLink = link[prefixIndex[1]:len(link)]
+	}
+	suffixIndex := suffix.FindStringIndex(url)
+	if len(suffixIndex) > 0 {
+		tmpUrl = url[:suffixIndex[0]]
+	}
+
+	return fmt.Sprintf("%s/%s", tmpUrl, tmpLink)
 }
 
 func getParameters() (err error) {
