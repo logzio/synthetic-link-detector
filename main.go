@@ -34,6 +34,8 @@ const (
 
 	defaultListener = "https://listener.logz.io:8071"
 	defaultLogType  = "synthetic-links-detector"
+
+	maxRedirects = 2
 )
 
 var (
@@ -148,10 +150,35 @@ func setupHttpClientLogzioSender() {
 
 func detectAndSend(link, mainUrl string) {
 	defer wg.Done()
+	currentRedirect := 0
+	linkToInspect := link
+	redirectedFrom := ""
+	for {
+		resp := createSendData(linkToInspect, mainUrl, redirectedFrom)
+		redirectedFrom = linkToInspect
+		if resp != nil {
+			if resp.StatusCode > 299 && resp.StatusCode < 400 && currentRedirect < maxRedirects {
+				linkToInspectUrlObj, err := resp.Location()
+				if err != nil {
+					logger.Printf("Error on redirect: %s", err.Error())
+					break
+				}
+				linkToInspect = linkToInspectUrlObj.String()
+				currentRedirect++
+			} else {
+				break
+			}
+		} else {
+			break
+		}
+	}
+}
+
+func createSendData(link, mainUrl, redirectedFrom string) *http.Response {
 	req, err := http.NewRequest(http.MethodGet, link, nil)
 	if err != nil {
 		logger.Printf("unable to create request: %v\n", err)
-		return
+		return nil
 	}
 
 	var t0, t1, t2, t3, t4, t5, t6 time.Time
@@ -194,7 +221,7 @@ func detectAndSend(link, mainUrl string) {
 	l, err := url.Parse(link)
 	if err != nil {
 		logger.Printf("could not parse link %s: %s\n", link, err.Error())
-		return
+		return nil
 	}
 
 	if l.Scheme == "https" {
@@ -211,18 +238,21 @@ func detectAndSend(link, mainUrl string) {
 
 	client := &http.Client{
 		Transport: tr,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
 		logger.Printf("failed to read response: %v\n", err)
-		return
+		return nil
 	}
 
 	w := io.Discard
 	if _, err := io.Copy(w, resp.Body); err != nil && w != io.Discard {
 		logger.Printf("failed to read response body: %v\n", err)
-		return
+		return nil
 	}
 
 	resp.Body.Close()
@@ -260,7 +290,12 @@ func detectAndSend(link, mainUrl string) {
 		data["total"] = t7.Sub(t0).Milliseconds()
 	}
 
+	if redirectedFrom != "" {
+		data["redirected_from"] = redirectedFrom
+	}
+
 	processAndSendLog(data)
+	return resp
 }
 
 func processAndSendLog(data map[string]interface{}) {
@@ -359,7 +394,7 @@ func getLinksInPage(url string) []string {
 					link := a.Val
 					matched, _ := regexp.MatchString("^http(s?)://", link)
 					if !matched {
-						link = url + link
+						link = getCleanLink(url, link)
 					}
 					if !contains(links, link) {
 						links = append(links, link)
@@ -375,6 +410,25 @@ func getLinksInPage(url string) []string {
 
 	f(doc)
 	return links
+}
+
+// Since main url can contain a suffix of '/', and a link can be relative have a prefix of `/`, we remove possible prefixes & suffixes
+// and generate the full link ourselves
+func getCleanLink(url, link string) string {
+	tmpUrl := url
+	tmpLink := link
+	prefix, _ := regexp.Compile("^/+")
+	suffix, _ := regexp.Compile("/+$")
+	prefixIndex := prefix.FindStringIndex(link)
+	if len(prefixIndex) > 0 {
+		tmpLink = link[prefixIndex[1]:len(link)]
+	}
+	suffixIndex := suffix.FindStringIndex(url)
+	if len(suffixIndex) > 0 {
+		tmpUrl = url[:suffixIndex[0]]
+	}
+
+	return fmt.Sprintf("%s/%s", tmpUrl, tmpLink)
 }
 
 func getParameters() (err error) {
