@@ -152,12 +152,12 @@ func detectAndSend(link, mainUrl string) {
 	defer wg.Done()
 	currentRedirect := 0
 	linkToInspect := link
+	redirectedFrom := ""
 	for {
-		resp := createSendData(linkToInspect, mainUrl)
+		resp := createSendData(linkToInspect, mainUrl, redirectedFrom)
+		redirectedFrom = linkToInspect
 		if resp != nil {
 			if resp.StatusCode > 299 && resp.StatusCode < 400 && currentRedirect < maxRedirects {
-				// TODO - delete:
-				logger.Printf("redirect %d of %d", currentRedirect, maxRedirects)
 				linkToInspectUrlObj, err := resp.Location()
 				if err != nil {
 					logger.Printf("Error on redirect: %s", err.Error())
@@ -174,7 +174,7 @@ func detectAndSend(link, mainUrl string) {
 	}
 }
 
-func createSendData(link, mainUrl string) *http.Response {
+func createSendData(link, mainUrl, redirectedFrom string) *http.Response {
 	req, err := http.NewRequest(http.MethodGet, link, nil)
 	if err != nil {
 		logger.Printf("unable to create request: %v\n", err)
@@ -288,6 +288,10 @@ func createSendData(link, mainUrl string) *http.Response {
 		data["connect"] = t3.Sub(t0).Milliseconds()
 		data["start_transfer"] = t4.Sub(t0).Milliseconds()
 		data["total"] = t7.Sub(t0).Milliseconds()
+	}
+
+	if redirectedFrom != "" {
+		data["redirected_from"] = redirectedFrom
 	}
 
 	processAndSendLog(data)
